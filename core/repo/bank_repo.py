@@ -22,10 +22,6 @@ class AbstractBankRepository(object):
     def get_auth_key(self, card_data: CardData, pin: str) -> Optional[str]:
         raise NotImplementedError
 
-    # @abc.abstractmethod
-    # def save(self, config_setting):
-    #     raise NotImplementedError
-    #
     @abc.abstractmethod
     def get_accounts(self, auth_key: str) -> GetAccountsRes:
         raise NotImplementedError
