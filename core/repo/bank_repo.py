@@ -10,7 +10,7 @@ from typing import Optional, List
 import logging
 
 from core.domain.entity import Session, CardData
-from core.dto import GetAccountsRes, GetBankBalanceRes
+from core.dto import GetAccountsRes, GetBankBalanceRes, BankDepositRes, BankWithdrawRes
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +34,13 @@ class AbstractBankRepository(object):
     def get_balance(self, auth_key: str, account_id: str) -> GetBankBalanceRes:
         raise NotImplementedError
 
-    # @abc.abstractmethod
-    # def create(self, card_data: CardData) -> str:
-    #     raise NotImplementedError
+    @abc.abstractmethod
+    def deposit(self, auth_key: str, account_id: str, amount: int) -> BankDepositRes:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def withdraw(self, auth_key: str, account_id: str, amount: int) -> BankWithdrawRes:
+        raise NotImplementedError
 
 
 class FakeBankRepository(AbstractBankRepository):
@@ -86,6 +90,53 @@ class FakeBankRepository(AbstractBankRepository):
                 )
 
         return GetBankBalanceRes(success=False, account_id=account_id, message="Account not found")
+
+    def deposit(self, auth_key: str, account_id: str, amount: int) -> BankDepositRes:
+        # TODO: move the session_store logic to middleware / annotation-based (cross-cutting concern)
+        expiration, card_number = self.session_store.get(auth_key, (0, ""))
+        if expiration < int(datetime.now().timestamp()):
+            return BankDepositRes(success=False, account_id=account_id, message="Auth key expired")
+
+        accounts: List[Account] = self.account_store.get(card_number, [])
+        for a in accounts:
+            if a.account_id == account_id:
+                a.balance += amount
+                # later when in DB, remember to commit
+
+                return BankDepositRes(
+                    success=True,
+                    message="Deposit successful",
+                    account_id=account_id,
+                    balance=a.balance
+                )
+        return BankDepositRes(success=False, account_id=account_id, message="Account not found")
+
+    def withdraw(self, auth_key: str, account_id: str, amount: int) -> BankWithdrawRes:
+        expiration, card_number = self.session_store.get(auth_key, (0, ""))
+        if expiration < int(datetime.now().timestamp()):
+            return BankWithdrawRes(success=False, account_id=account_id, message="Auth key expired")
+
+        accounts: List[Account] = self.account_store.get(card_number, [])
+        for a in accounts:
+            if a.account_id == account_id:
+                if a.balance < amount:
+                    return BankWithdrawRes(
+                        success=False,
+                        message="Insufficient balance",
+                        account_id=account_id,
+                        balance=a.balance
+                    )
+
+                a.balance -= amount
+                # later when in DB, remember to commit
+
+                return BankWithdrawRes(
+                    success=True,
+                    message="Withdraw successful",
+                    account_id=account_id,
+                    balance=a.balance
+                )
+        return BankWithdrawRes(success=False, account_id=account_id, message="Account not found")
 
 
 class Account(object):

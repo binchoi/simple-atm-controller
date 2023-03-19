@@ -22,6 +22,8 @@ class GetAccountsRes:
     message: str = None
     account_ids: List[str] = None
 
+# TODO: create a base class for below res
+
 
 @dataclass
 class GetBalanceRes:
@@ -38,3 +40,34 @@ class GetBankBalanceRes:
     account_id: str = None
     message: str = None
 
+
+@dataclass
+class DepositRes:
+    success: bool
+    balance: int = None
+    account_id: str = None
+    message: str = None
+
+
+@dataclass
+class BankDepositRes:
+    success: bool
+    balance: int = None
+    account_id: str = None
+    message: str = None
+
+
+@dataclass
+class WithdrawRes:
+    success: bool
+    balance: int = None
+    account_id: str = None
+    message: str = None
+
+
+@dataclass
+class BankWithdrawRes:
+    success: bool
+    balance: int = None
+    account_id: str = None
+    message: str = None
