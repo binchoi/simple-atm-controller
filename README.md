@@ -1,5 +1,21 @@
 # Simple ATM Controller
 
+
+
+To build:
+```
+ pip3 install -r requirements.txt 
+```
+
+To test:
+```
+pytest
+```
+
+---
+Instructions:
+
+
 Write code for a simple ATM. It doesn't need any UI (either graphical or console), but a controller should be implemented and tested.
 
 
