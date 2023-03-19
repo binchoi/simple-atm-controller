@@ -46,17 +46,17 @@ class Session(object):
         self.auth_key = auth_key
         self.expiry = int((datetime.now() + timedelta(minutes=ttl)).timestamp())
 
-
+    def to_dict(self) -> Dict[str, Any]:
+        return dict(
+            session_id=self.session_id,
+            card_data=self.card_data.to_dict(),
+            auth_key=self.auth_key,
+            expiry=self.expiry,
+        )
     # @classmethod
     # def from_dict(cls, session_dict: Dict[str, Any]) -> 'Session':
     #     return cls(
     #         session_id=session_dict['session_id'],
     #         session_data=session_dict['session_data'],
-    #     )
-    #
-    # def to_dict(self) -> Dict[str, Any]:
-    #     return dict(
-    #         session_id=self.session_id,
-    #         session_data=self.session_data,
     #     )
     #

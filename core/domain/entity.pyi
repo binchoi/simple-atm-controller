@@ -20,8 +20,10 @@ class CardData(object):
 class Session(object):
     session_id: str
     card_data: CardData
-    auth_token: str
+    auth_key: str
     expiry: int
 
-    def __init__(self, session_id: str, card_data: CardData, ttl: int, auth_token: str = None) -> None:
+    def __init__(self, session_id: str, card_data: CardData, ttl: int, auth_key: str = None) -> None:
         ...
+
+    def to_dict(self) -> Dict[str, Any]: ...

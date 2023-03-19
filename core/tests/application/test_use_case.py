@@ -2,7 +2,8 @@ import json
 import pytest
 
 from core.application.use_case import ATMUseCase
-from core.domain.entity import CardData
+from core.domain.entity import CardData, Session
+from core.dto import GetAccountsRes
 
 
 def test_usecase_validate_card_success():
@@ -69,7 +70,81 @@ def test_usecase_validate_card_failure():
 # TODO: add more tests (table driven) for validate_card
 
 
-# def test_usecase_auth_success():
+def test_usecase_auth_success(mocker):
+    # Given
+    mock_session = Session(
+            session_id="1234",
+            card_data=CardData(
+                card_number="1234567890123456",
+                name="John Doe",
+                expiration_date="20240101",
+                card_verification_code="123",
+                service_code="123"
+            ),
+            ttl=10
+        )
+
+    mocker.patch(
+        "core.repo.session_repo.InMemorySessionRepository.get",
+        return_value=mock_session
+    )
+
+    # TODO: include assert called with checks
+    mocker.patch(
+        "core.repo.bank_repo.FakeBankRepository.get_auth_key",
+        return_value="11111"
+    )
+
+    mock_response = GetAccountsRes(success=True, message="Retrieved account ids", account_ids=["7777"])
+    mocker.patch("core.repo.bank_repo.FakeBankRepository.get_accounts", return_value=mock_response)
+
+    uc = ATMUseCase.get_instance()
+    res = uc.auth(pin="1234", session_id="1234")
+
+    assert res.success
+    assert res.message == mock_response.message
+    assert res.account_ids == mock_response.account_ids
+
+
+def test_usecase_auth_failure(mocker):
+    # Given
+    mock_session = Session(
+            session_id="1234",
+            card_data=CardData(
+                card_number="1234567890123456",
+                name="John Doe",
+                expiration_date="20240101",
+                card_verification_code="123",
+                service_code="123"
+            ),
+            ttl=10
+        )
+
+    mocker.patch(
+        "core.repo.session_repo.InMemorySessionRepository.get",
+        return_value=mock_session
+    )
+
+    # TODO: include assert called with checks
+    mocker.patch(
+        "core.repo.bank_repo.FakeBankRepository.get_auth_key",
+        return_value="11111"
+    )
+
+    mock_response = GetAccountsRes(success=False, message="Invalid PIN", account_ids=[])
+    mocker.patch("core.repo.bank_repo.FakeBankRepository.get_accounts", return_value=mock_response)
+
+    uc = ATMUseCase.get_instance()
+    res = uc.auth(pin="1234", session_id="1234")
+
+    assert not res.success
+    assert res.message == mock_response.message
+    assert res.account_ids == mock_response.account_ids
+
+
+
+
+
 
 
 
