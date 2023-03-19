@@ -40,10 +40,10 @@ class CardData(object):
 
 
 class Session(object):
-    def __init__(self, session_id: str, card_data: CardData, ttl: int, auth_token: str = None) -> None:
+    def __init__(self, session_id: str, card_data: CardData, ttl: int, auth_key: str = None) -> None:
         self.session_id = session_id
         self.card_data = card_data
-        self.auth_token = auth_token
+        self.auth_key = auth_key
         self.expiry = int((datetime.now() + timedelta(minutes=ttl)).timestamp())
 
 

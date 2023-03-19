@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import abc
 import uuid
+from typing import Optional
 
 from django.db import transaction
 
@@ -17,13 +18,13 @@ logger = logging.getLogger(__name__)
 class AbstractSessionRepository(object):
     __metaclass__ = abc.ABCMeta
 
-    # @abc.abstractmethod
-    # def get(self, session_id: int) -> Session:
-    #     raise NotImplementedError
-    #
-    # @abc.abstractmethod
-    # def save(self, config_setting):
-    #     raise NotImplementedError
+    @abc.abstractmethod
+    def get(self, session_id: str) -> Optional[Session]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def save(self, session: Session) -> None:
+        raise NotImplementedError
     #
     # @abc.abstractmethod
     # def delete(self, unit_id):
@@ -46,3 +47,10 @@ class InMemorySessionRepository(AbstractSessionRepository):
         session = Session(session_id=session_id, card_data=card_data, ttl=self.SESSION_LIFETIME)
         self.kv_store[session_id] = session
         return session_id
+
+    def get(self, session_id: str) -> Optional[Session]:
+        return self.kv_store.get(session_id, None)
+
+    def save(self, session: Session) -> None:
+        self.kv_store[session.session_id] = session
+        return
