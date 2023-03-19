@@ -3,10 +3,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import datetime
 import logging
+from typing import Optional
 
 from core.application.errors import CardValidationError
-from core.domain.entity import CardData
-from core.dto import ValidateCardRes, AuthRes
+from core.domain.entity import CardData, Session
+from core.dto import ValidateCardRes, AuthRes, GetBalanceRes
 from core.repo.bank_repo import FakeBankRepository
 from core.repo.session_repo import InMemorySessionRepository
 from core.util import ChipDecryptor
@@ -55,7 +56,10 @@ class ATMUseCase(object):
     # auth is responsible for authentication of PIN and account. In case of successful authentication with the bank,
     # it updates the session with auth_key AND returns account ids associated with the card for users to choose from
     def auth(self, pin: str, session_id: str) -> AuthRes:
-        session = self.session_repo.get(session_id=session_id)
+        session = self.session_repo.get_if_valid(session_id=session_id)
+        if not session:
+            return AuthRes(success=False, message="session is invalid")
+
         auth_key = self.bank_repo.get_auth_key(card_data=session.card_data, pin=pin)
         if not auth_key:
             return AuthRes(success=False, message="invalid pin and auth data")
@@ -67,8 +71,17 @@ class ATMUseCase(object):
         res = self.bank_repo.get_accounts(auth_key=auth_key)
         return AuthRes(success=res.success, message=res.message, account_ids=res.account_ids)
 
+    def get_balance(self, account_id: str, session_id: str) -> GetBalanceRes:
+        session = self.session_repo.get_if_valid(session_id=session_id)
+        if not session or not session.auth_key:
+            return GetBalanceRes(success=False, account_id=account_id, message="session is invalid")
 
-    # def get_balance(self, account_id: str, session_id: str) -> GetBalanceRes: ...
+        res = self.bank_repo.get_balance(account_id=account_id, auth_key=session.auth_key)
+        return GetBalanceRes(success=res.success, message=res.message, account_id=res.account_id, balance=res.balance)
+
+
+
+
     # def deposit(self, account_id: str, session_id: str, amount: int) -> DepositRes: ...
     # def withdraw(self, account_id: str, session_id: str, amount: int) -> WithdrawRes: ...
 

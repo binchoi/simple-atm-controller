@@ -22,3 +22,19 @@ class GetAccountsRes:
     message: str = None
     account_ids: List[str] = None
 
+
+@dataclass
+class GetBalanceRes:
+    success: bool
+    balance: int = None
+    account_id: str = None
+    message: str = None
+
+
+@dataclass
+class GetBankBalanceRes:
+    success: bool
+    balance: int = None
+    account_id: str = None
+    message: str = None
+

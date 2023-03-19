@@ -23,6 +23,10 @@ class AbstractSessionRepository(object):
         raise NotImplementedError
 
     @abc.abstractmethod
+    def get_if_valid(self, session_id: str) -> Optional[Session]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def save(self, session: Session) -> None:
         raise NotImplementedError
     #
@@ -50,6 +54,12 @@ class InMemorySessionRepository(AbstractSessionRepository):
 
     def get(self, session_id: str) -> Optional[Session]:
         return self.kv_store.get(session_id, None)
+
+    def get_if_valid(self, session_id: str) -> Optional[Session]:
+        session = self.kv_store.get(session_id, None)
+        if session is None or not session.is_valid():
+            return None
+        return session
 
     def save(self, session: Session) -> None:
         self.kv_store[session.session_id] = session

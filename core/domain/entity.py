@@ -53,6 +53,10 @@ class Session(object):
             auth_key=self.auth_key,
             expiry=self.expiry,
         )
+
+    def is_valid(self) -> bool:
+        return self.expiry > int(datetime.now().timestamp())
+
     # @classmethod
     # def from_dict(cls, session_dict: Dict[str, Any]) -> 'Session':
     #     return cls(

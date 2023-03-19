@@ -3,8 +3,9 @@ import pytest
 
 from core.application.use_case import ATMUseCase
 from core.domain.entity import CardData, Session
-from core.dto import GetAccountsRes
+from core.dto import GetAccountsRes, GetBankBalanceRes
 
+# TODO: add assert_called_with checks for each test
 
 def test_usecase_validate_card_success():
     uc = ATMUseCase.get_instance()
@@ -85,7 +86,7 @@ def test_usecase_auth_success(mocker):
         )
 
     mocker.patch(
-        "core.repo.session_repo.InMemorySessionRepository.get",
+        "core.repo.session_repo.InMemorySessionRepository.get_if_valid",
         return_value=mock_session
     )
 
@@ -121,7 +122,7 @@ def test_usecase_auth_failure(mocker):
         )
 
     mocker.patch(
-        "core.repo.session_repo.InMemorySessionRepository.get",
+        "core.repo.session_repo.InMemorySessionRepository.get_if_valid",
         return_value=mock_session
     )
 
@@ -134,15 +135,121 @@ def test_usecase_auth_failure(mocker):
     mock_response = GetAccountsRes(success=False, message="Invalid PIN", account_ids=[])
     mocker.patch("core.repo.bank_repo.FakeBankRepository.get_accounts", return_value=mock_response)
 
+    # When
     uc = ATMUseCase.get_instance()
     res = uc.auth(pin="1234", session_id="1234")
 
+    # Then
     assert not res.success
     assert res.message == mock_response.message
     assert res.account_ids == mock_response.account_ids
 
 
+def test_usecase_get_balance_success(mocker):
+    # Given
+    mock_session = Session(
+            session_id="1234",
+            card_data=CardData(
+                card_number="1234567890123456",
+                name="John Doe",
+                expiration_date="20240101",
+                card_verification_code="123",
+                service_code="123"
+            ),
+            ttl=10,
+            auth_key="11111"
+        )
 
+    mocker.patch(
+        "core.repo.session_repo.InMemorySessionRepository.get_if_valid",
+        return_value=mock_session
+    )
+
+    # TODO: include assert called with checks
+    mock_bank_res = GetBankBalanceRes(success=True, message="Retrieved balance", account_id="101010", balance=100000)
+    mocker.patch(
+        "core.repo.bank_repo.FakeBankRepository.get_balance",
+        return_value=mock_bank_res
+    )
+
+    uc = ATMUseCase.get_instance()
+    res = uc.get_balance(account_id="101010", session_id="1234")
+
+    assert res.success
+    assert res.message == mock_bank_res.message
+    assert res.account_id == mock_bank_res.account_id
+    assert res.balance == mock_bank_res.balance
+
+
+def test_usecase_get_balance_failure_when_session_invalid(mocker):
+    # Given
+    mock_sessions = [
+        Session(
+            session_id="1234",
+            card_data=CardData(
+                card_number="1234567890123456",
+                name="John Doe",
+                expiration_date="20240101",
+                card_verification_code="123",
+                service_code="123"
+            ),
+            ttl=10,
+            auth_key=None  # No Auth Key
+        ),
+        None,  # Invalid Session / Expired
+        ]
+    for s in mock_sessions:
+        mocker.patch(
+            "core.repo.session_repo.InMemorySessionRepository.get_if_valid",
+            return_value=s
+        )
+
+        uc = ATMUseCase.get_instance()
+        res = uc.get_balance(account_id="101010", session_id="1234")
+
+        assert not res.success
+        assert res.account_id == "101010"
+        assert res.message == "session is invalid"
+        assert res.balance is None
+
+
+def test_usecase_get_balance_failure_due_to_bank(mocker):
+    # Given
+    mock_session = Session(
+            session_id="1234",
+            card_data=CardData(
+                card_number="1234567890123456",
+                name="John Doe",
+                expiration_date="20240101",
+                card_verification_code="123",
+                service_code="123"
+            ),
+            ttl=10,
+            auth_key="11111"
+        )
+
+    mocker.patch(
+        "core.repo.session_repo.InMemorySessionRepository.get_if_valid",
+        return_value=mock_session
+    )
+    mock_bank_res_possibilities = [
+        GetBankBalanceRes(success=False, account_id="101010", message="Auth key expired"),
+        GetBankBalanceRes(success=False, account_id="101010", message="Account not found"),
+    ]
+
+    for r in mock_bank_res_possibilities:
+        mocker.patch(
+            "core.repo.bank_repo.FakeBankRepository.get_balance",
+            return_value=r
+        )
+
+        uc = ATMUseCase.get_instance()
+        res = uc.get_balance(account_id="101010", session_id="1234")
+
+        assert not res.success
+        assert res.message == r.message
+        assert res.account_id == r.account_id
+        assert res.balance == r.balance
 
 
 

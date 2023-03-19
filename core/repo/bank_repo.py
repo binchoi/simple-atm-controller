@@ -10,7 +10,7 @@ from typing import Optional, List
 import logging
 
 from core.domain.entity import Session, CardData
-from core.dto import GetAccountsRes
+from core.dto import GetAccountsRes, GetBankBalanceRes
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,10 @@ class AbstractBankRepository(object):
     #
     @abc.abstractmethod
     def get_accounts(self, auth_key: str) -> GetAccountsRes:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_balance(self, auth_key: str, account_id: str) -> GetBankBalanceRes:
         raise NotImplementedError
 
     # @abc.abstractmethod
@@ -65,13 +69,31 @@ class FakeBankRepository(AbstractBankRepository):
         accounts: List[Account] = self.account_store.get(card_number, [])
         return GetAccountsRes(success=True, message="Retrieved account ids", account_ids=[a.account_id for a in accounts])
 
+    def get_balance(self, auth_key: str, account_id: str) -> GetBankBalanceRes:
+        expiration, card_number = self.session_store.get(auth_key, (0, ""))
+        if expiration < int(datetime.now().timestamp()):
+            return GetBankBalanceRes(success=False, account_id=account_id, message="Auth key expired")
+
+        accounts: List[Account] = self.account_store.get(card_number, [])
+        # TODO: use better storage solution as this is O(n) - suboptimal performance
+        for a in accounts:
+            if a.account_id == account_id:
+                return GetBankBalanceRes(
+                    success=True,
+                    message="Retrieved account balance",
+                    account_id=account_id,
+                    balance=a.balance
+                )
+
+        return GetBankBalanceRes(success=False, account_id=account_id, message="Account not found")
+
 
 class Account(object):
     account_id: str
     card_number: str
-    balance: str
+    balance: int
 
-    def __init__(self, account_id: str, card_number: str, balance: str):
+    def __init__(self, account_id: str, card_number: str, balance: int):
         self.account_id = account_id
         self.card_number = card_number
         self.balance = balance
